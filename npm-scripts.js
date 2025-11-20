@@ -5,76 +5,73 @@ const { version } = require('./package.json');
 
 const task = process.argv.slice(2).join(' ');
 
-// eslint-disable-next-line no-console
 console.log(`npm-scripts.js [INFO] running task "${task}"`);
 
-switch (task)
-{
+switch (task) {
 	case 'typescript:build':
-	{
-		build();
+		{
+			build();
 
-		break;
-	}
+			break;
+		}
 
 	case 'typescript:clean':
-	{
-		clean()
+		{
+			clean()
 
-		break;
-	}
+			break;
+		}
 
 	case 'typescript:rebuild':
-	{
-		clean()
-		build()
+		{
+			clean()
+			build()
 
-		break;
-	}
+			break;
+		}
 
 	case 'typescript:watch':
-	{
-		const TscWatchClient = require('tsc-watch/client');
+		{
+			const TscWatchClient = require('tsc-watch/client');
 
-		clean();
+			clean();
 
-		const watch = new TscWatchClient();
+			const watch = new TscWatchClient();
 
-		watch.on('success', taskReplaceVersion);
-		watch.start('--pretty');
+			watch.on('success', taskReplaceVersion);
+			watch.start('--pretty');
 
-		break;
-	}
+			break;
+		}
 
 	case 'lint':
-	{
-		execute('MEDIASOUP_NODE_LANGUAGE=typescript eslint -c .eslintrc.js --ext=ts src/');
-		execute('MEDIASOUP_NODE_LANGUAGE=javascript eslint -c .eslintrc.js --ext=js --ignore-pattern \'!.eslintrc.js\' .eslintrc.js npm-scripts.js test/');
+		{
+			execute('./node_modules/.bin/eslint --ext .js,.ts .');
 
-		break;
-	}
+			break;
+		}
 
 	case 'test':
-	{
-		taskReplaceVersion();
-		execute('jest');
+		{
+			build();
+			execute('jest');
 
-		break;
-	}
+			break;
+		}
 
 	case 'coverage':
-	{
-		taskReplaceVersion();
-		execute('jest --coverage');
-		execute('open-cli coverage/lcov-report/index.html');
+		{
+			build();
+			execute('jest --coverage');
+			execute('open-cli coverage/lcov-report/index.html');
 
-		break;
-	}
+			break;
+		}
 
 	default:
-	{
-		throw new TypeError(`unknown task "${task}"`);
-	}
+		{
+			throw new TypeError(`unknown task "${task}"`);
+		}
 }
 
 function build() {
@@ -86,8 +83,7 @@ function clean() {
 	execute("rm -rf lib");
 }
 
-function taskReplaceVersion()
-{
+function taskReplaceVersion() {
 	const file = 'lib/index.js';
 	const text = fs.readFileSync(file, { encoding: 'utf8' });
 	const result = text.replace(/__MEDIASOUP_CLIENT_VERSION__/g, version);
@@ -95,17 +91,13 @@ function taskReplaceVersion()
 	fs.writeFileSync(file, result, { encoding: 'utf8' });
 }
 
-function execute(command)
-{
-	// eslint-disable-next-line no-console
+function execute(command) {
 	console.log(`npm-scripts.js [INFO] executing command: ${command}`);
 
-	try
-	{
-		execSync(command,	{ stdio: [ 'ignore', process.stdout, process.stderr ] });
-	}
-	catch (error)
-	{
+	try {
+		execSync(command, { stdio: ['ignore', process.stdout, process.stderr] });
+	} catch (error) {
+		console.error(error);
 		process.exit(1);
 	}
 }

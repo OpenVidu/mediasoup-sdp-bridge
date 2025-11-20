@@ -14,7 +14,7 @@
 // * Chrome 116.
 // * Safari 14.1.1 (macOS).
 
-import { RtpCapabilities } from "mediasoup/node/lib/types";
+import { RtpCapabilities } from "mediasoup/types";
 
 export const firefox: RtpCapabilities = {
   codecs: [
@@ -795,21 +795,6 @@ export const chrome: RtpCapabilities = {
     },
     {
       kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/video-content-type",
-      preferredId: 6,
-    },
-    {
-      kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/video-timing",
-      preferredId: 7,
-    },
-    {
-      kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/color-space",
-      preferredId: 8,
-    },
-    {
-      kind: "video",
       uri: "urn:ietf:params:rtp-hdrext:sdes:mid",
       preferredId: 4,
     },
@@ -1194,21 +1179,6 @@ export const safari: RtpCapabilities = {
       kind: "video",
       uri: "http://www.webrtc.org/experiments/rtp-hdrext/playout-delay",
       preferredId: 12,
-    },
-    {
-      kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/video-content-type",
-      preferredId: 11,
-    },
-    {
-      kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/video-timing",
-      preferredId: 7,
-    },
-    {
-      kind: "video",
-      uri: "http://www.webrtc.org/experiments/rtp-hdrext/color-space",
-      preferredId: 8,
     },
     {
       kind: "video",

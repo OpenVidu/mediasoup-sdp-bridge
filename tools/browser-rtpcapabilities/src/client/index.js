@@ -1,4 +1,5 @@
 "use strict";
+/* global adapter */
 
 const JSON5 = require("json5");
 
@@ -24,7 +25,6 @@ window.addEventListener("load", () => {
 
   if ("adapter" in window) {
     console.log(
-      // eslint-disable-next-line no-undef
       `[window.on('load')] webrtc-adapter loaded, browser: '${adapter.browserDetails.browser}', version: '${adapter.browserDetails.version}'`
     );
   } else {

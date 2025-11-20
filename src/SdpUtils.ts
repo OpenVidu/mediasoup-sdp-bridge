@@ -1,16 +1,18 @@
 // TODO, FIXME: Here we're assuming that Unified Plan is the correct way to
 // handle the SDP messages. For a more robust handling, this should probably
 // depend on the actual type of SDP: plain, PlanB, or UnifiedPlan.
-import * as MsSdpUnifiedPlanUtils from "mediasoup-client/lib/handlers/sdp/unifiedPlanUtils";
+import * as MsSdpUnifiedPlanUtils from "mediasoup-client/handlers/sdp/unifiedPlanUtils";
 
-import * as MsSdpUtils from "mediasoup-client/lib/handlers/sdp/commonUtils";
-import * as MsOrtc from "mediasoup-client/lib/ortc";
+import * as MsSdpUtils from "mediasoup-client/handlers/sdp/commonUtils";
+import * as MsOrtc from "mediasoup-client/ortc";
 import {
   MediaKind,
   RtpCapabilities,
   RtpParameters,
-} from "mediasoup/node/lib/types";
-import { MediaAttributes } from "sdp-transform";
+  RtpCodecCapability,
+  RtpHeaderExtension,
+} from "mediasoup/types";
+import type { MediaDescription, SessionDescription } from "sdp-transform";
 import _ from "lodash";
 
 // SDP to RTP Capabilities and Parameters
@@ -20,11 +22,11 @@ import _ from "lodash";
 // of each kind.
 // MsSdpUtils.extractRtpCapabilities() only works for 1 audio and 1 video.
 export function sdpToConsumerRtpCapabilities(
-  sdpObject: object,
-  localCaps: RtpCapabilities
+  sdpObject: SessionDescription,
+  localCaps: RtpCapabilities,
 ): RtpCapabilities {
   // Clone input to avoid side effect modifications.
-  const _localCaps = JSON.parse(JSON.stringify(localCaps));
+  const _localCaps = JSON.parse(JSON.stringify(localCaps)) as RtpCapabilities;
 
   const caps: RtpCapabilities = MsSdpUtils.extractRtpCapabilities({
     sdpObject,
@@ -33,21 +35,34 @@ export function sdpToConsumerRtpCapabilities(
   // DEBUG: Uncomment for details.
   // prettier-ignore
   // {
-  //   console.debug(`DEBUG [SdpUtils.sdpToConsumerRtpCapabilities] RtpCapabilities:\n${JSON.stringify(caps, null, 2)}`);
+  //   console.debug(
+  //     '[SdpUtils.sdpToConsumerRtpCapabilities] RtpCapabilities',
+  //     caps
+  //   );
   // }
 
   // This may throw.
-  MsOrtc.validateRtpCapabilities(_localCaps);
-  MsOrtc.validateRtpCapabilities(caps);
+  MsOrtc.validateAndNormalizeRtpCapabilities(_localCaps);
+  MsOrtc.validateAndNormalizeRtpCapabilities(caps);
 
-  const extendedCaps = MsOrtc.getExtendedRtpCapabilities(caps, _localCaps);
+  const extendedCaps = MsOrtc.getExtendedRtpCapabilities(
+    _localCaps,
+    caps,
+    false,
+  );
   const consumerCaps = MsOrtc.getRecvRtpCapabilities(extendedCaps);
 
   // DEBUG: Uncomment for details.
   // prettier-ignore
   // {
-  //   console.debug(`DEBUG [SdpUtils.sdpToConsumerRtpCapabilities] ExtendedRtpCapabilities:\n${JSON.stringify(extendedCaps, null, 2)}`);
-  //   console.debug(`DEBUG [SdpUtils.sdpToConsumerRtpCapabilities] Recv/ConsumerRtpCapabilities:\n${JSON.stringify(consumerCaps, null, 2)}`);
+  //   console.debug(
+  //     '[SdpUtils.sdpToConsumerRtpCapabilities] ExtendedRtpCapabilities',
+  //     extendedCaps
+  //   );
+  //   console.debug(
+  //     '[SdpUtils.sdpToConsumerRtpCapabilities] Recv/ConsumerRtpCapabilities',
+  //     consumerCaps
+  //   );
   // }
 
   return consumerCaps;
@@ -57,12 +72,12 @@ export function sdpToConsumerRtpCapabilities(
 // of each kind.
 // MsSdpUtils.extractRtpCapabilities() only works for 1 audio and 1 video.
 export function sdpToProducerRtpParameters(
-  sdpObject: any,
+  sdpObject: SessionDescription,
   localCaps: RtpCapabilities,
-  kind: MediaKind
+  kind: MediaKind,
 ): RtpParameters {
   // Clone input to avoid side effect modifications.
-  const _localCaps = JSON.parse(JSON.stringify(localCaps));
+  const _localCaps = JSON.parse(JSON.stringify(localCaps)) as RtpCapabilities;
 
   const caps: RtpCapabilities = MsSdpUtils.extractRtpCapabilities({
     sdpObject,
@@ -71,24 +86,38 @@ export function sdpToProducerRtpParameters(
   // DEBUG: Uncomment for details.
   // prettier-ignore
   // {
-  //   console.debug(`DEBUG [SdpUtils.sdpToProducerRtpParameters] (${kind}) RtpCapabilities:\n${JSON.stringify(caps, null, 2)}`);
+  //   console.debug(
+  //     `[SdpUtils.sdpToProducerRtpParameters] (${kind}) RtpCapabilities`,
+  //     caps
+  //   );
   // }
 
   // Filter out all caps that don't match the desired media kind.
-  caps.codecs = caps.codecs?.filter((c) => c.kind === kind);
-  caps.headerExtensions = caps.headerExtensions?.filter((e) => e.kind === kind);
+  caps.codecs = caps.codecs?.filter(
+		(codec: RtpCodecCapability) => codec.kind === kind
+	);
+  caps.headerExtensions = caps.headerExtensions?.filter(
+    (ext: RtpHeaderExtension) => ext.kind === kind,
+  );
 
   // This may throw.
-  MsOrtc.validateRtpCapabilities(_localCaps);
-  MsOrtc.validateRtpCapabilities(caps);
+  MsOrtc.validateAndNormalizeRtpCapabilities(_localCaps);
+  MsOrtc.validateAndNormalizeRtpCapabilities(caps);
 
-  const extendedCaps = MsOrtc.getExtendedRtpCapabilities(_localCaps, caps);
+  const extendedCaps = MsOrtc.getExtendedRtpCapabilities(
+    _localCaps,
+    caps,
+    true,
+  );
   const producerParams = MsOrtc.getSendingRtpParameters(kind, extendedCaps);
 
   // DEBUG: Uncomment for details.
   // prettier-ignore
   // {
-  //   console.debug(`DEBUG [SdpUtils.sdpToProducerRtpParameters] (${kind}) SendingRtpParameters:\n${JSON.stringify(producerParams, null, 2)}`);
+  //   console.debug(
+  //     `[SdpUtils.sdpToProducerRtpParameters] (${kind}) SendingRtpParameters`,
+  //     producerParams
+  //   );
   // }
 
   // FIXME: Use correct values for an SDP Answer.
@@ -96,40 +125,62 @@ export function sdpToProducerRtpParameters(
   // (mediasoup server) values, but we actually want to keep some of the remote
   // ones on SDP Answers, such as codec payload types or header extension IDs.
   const rtxCodecRegex = /.+\/rtx$/i;
+
   for (const codec of producerParams.codecs) {
+    const codecParameters = (codec.parameters ??= {});
+
     if (rtxCodecRegex.test(codec.mimeType)) {
       const extendedCodec = extendedCaps.codecs.find(
-        (c: any) => c.localPayloadType === codec.parameters.apt
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (c: any) => c.localPayloadType === codecParameters.apt,
       );
-      if (extendedCodec) {
+
+      if (
+        extendedCodec &&
+        typeof extendedCodec.remoteRtxPayloadType === "number" &&
+        typeof extendedCodec.remotePayloadType === "number"
+      ) {
         codec.payloadType = extendedCodec.remoteRtxPayloadType;
-        codec.parameters.apt = extendedCodec.remotePayloadType;
+        codecParameters.apt = extendedCodec.remotePayloadType;
       }
     } else {
       const extendedCodec = extendedCaps.codecs.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (c: any) =>
           c.mimeType === codec.mimeType &&
           c.clockRate === codec.clockRate &&
           c.channels === codec.channels &&
-          _.isEqual(c.localParameters, codec.parameters)
+          _.isEqual(c.localParameters, codecParameters),
       );
-      if (extendedCodec) {
+
+      if (
+        extendedCodec &&
+        typeof extendedCodec.remotePayloadType === "number"
+      ) {
         codec.payloadType = extendedCodec.remotePayloadType;
       }
     }
   }
   for (const headerExt of producerParams.headerExtensions ?? []) {
     const extendedExt = extendedCaps.headerExtensions.find(
-      (h: any) => h.kind === kind && h.uri === headerExt.uri
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (h: any) => h.kind === kind && h.uri === headerExt.uri,
     );
+
     if (extendedExt) {
       headerExt.id = extendedExt.recvId;
     }
   }
 
-  const sdpMediaObj: MediaAttributes =
-    (sdpObject.media || []).find((m: { type: MediaKind }) => m.type === kind) ||
-    {};
+  const sdpMediaObj = sdpObject.media.find(
+    (m: MediaDescription) => m.type === kind,
+  );
+
+  if (!sdpMediaObj) {
+    throw new Error(
+      `[SdpUtils.sdpToProducerRtpParameters] Media of kind '${kind}' not found in SDP`,
+    );
+  }
 
   // Fill `RtpParameters.mid`.
   if ("mid" in sdpMediaObj) {
@@ -140,7 +191,7 @@ export function sdpToProducerRtpParameters(
 
   // Fill `RtpParameters.encodings`.
   {
-    if ("ssrcs" in sdpMediaObj) {
+    if (sdpMediaObj.ssrcs) {
       producerParams.encodings = MsSdpUnifiedPlanUtils.getRtpEncodings({
         offerMediaObject: sdpMediaObj,
       });
@@ -148,7 +199,8 @@ export function sdpToProducerRtpParameters(
       producerParams.encodings = [];
     }
 
-    if ("rids" in sdpMediaObj) {
+    if (sdpMediaObj.rids) {
+      producerParams.encodings = producerParams.encodings ?? [];
       // FIXME: Maybe mediasoup's getRtpEncodings() should just be improved
       // to include doing this, so we don't need to branch an if() here.
       sdpMediaObj.rids
@@ -180,8 +232,14 @@ export function sdpToProducerRtpParameters(
   // DEBUG: Uncomment for details.
   // prettier-ignore
   // {
-  //   console.debug(`DEBUG [SdpUtils.sdpToProducerRtpParameters] (${kind}) ExtendedRtpCapabilities:\n${JSON.stringify(extendedCaps, null, 2)}`);
-  //   console.debug(`DEBUG [SdpUtils.sdpToProducerRtpParameters] (${kind}) ProducerRtpParameters:\n${JSON.stringify(producerParams, null, 2)}`);
+  //   console.debug(
+  //     `[SdpUtils.sdpToProducerRtpParameters] (${kind}) ExtendedRtpCapabilities`,
+  //     extendedCaps
+  //   );
+  //   console.debug(
+  //     `[SdpUtils.sdpToProducerRtpParameters] (${kind}) ProducerRtpParameters`,
+  //     producerParams
+  //   );
   // }
 
   return producerParams;
