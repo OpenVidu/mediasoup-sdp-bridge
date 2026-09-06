@@ -1,5 +1,9 @@
 # mediasoup-sdp-bridge v3
 
+> [!WARNING]
+> **This repository is no longer maintained.** It was never actually used by any
+> OpenVidu project.
+
 [![][npm-shield-mediasoup-sdp-bridge]][npm-mediasoup-sdp-bridge]
 [![][travis-ci-shield-mediasoup-sdp-bridge]][travis-ci-mediasoup-sdp-bridge]
 
